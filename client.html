@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Auto File Uploader</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+      --radius: 8px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #fafafa;
+      color: var(--gray-800);
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: var(--gray-800);
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+
+    input[type="text"],
+    input[type="file"],
+    input[type="number"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    .input-group {
+      margin-bottom: 1rem;
+    }
+
+    .small {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+    }
+
+    .percent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+      padding: 1rem 0;
+      border-top: 1px solid var(--gray-200);
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .percent-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .percent-item input[type="number"] {
+      width: 80px;
+    }
+
+    .file-stats {
+      background: var(--gray-100);
+      padding: 1rem;
+      border-radius: var(--radius);
+      font-weight: 600;
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+
+    .btn-stop {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-stop:hover:not(:disabled) {
+      background: #dc2626;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #log {
+      width: 100%;
+      height: 300px;
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border: none;
+      border-radius: var(--radius);
+      resize: vertical;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .clear-log {
+      background: none;
+      border: none;
+      color: var(--gray-600);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 640px) {
+      .percent-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Auto File Uploader</h1>
+
+  <div class="card">
+    <div class="input-group">
+      <label for="uploadUrl">Upload Endpoint (Ngrok URL + /upload)</label>
+      <input type="text" id="uploadUrl" placeholder="https://abc123.ngrok-free.app/upload" 
+             value="https://d7fc8dff5960.ngrok-free.app/upload" />
+    </div>
+
+    <div class="input-group">
+      <label for="folderInput">Select Folder</label>
+      <input type="file" id="folderInput" webkitdirectory directory multiple />
+      <div class="small">Choose a folder — the browser will read all files inside.</div>
+    </div>
+
+    <div id="fileStats" class="file-stats">No folder selected yet.</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">File Type Distribution (%)</h3>
+    <div class="percent-grid">
+      <div class="percent-item">
+        <label>PDF</label>
+        <input type="number" id="pdfPct" value="35" min="0" max="100" />%
+      </div>
+      <div class="percent-item">
+        <label>Images</label>
+        <input type="number" id="imgPct" value="25" min="0" max="100" />%
+      </div>
+      <div class="percent-item">
+        <label>Fingerprints</label>
+        <input type="number" id="fpPct" value="25" min="0" max="100" />%
+      </div>
+      <div class="percent-item">
+        <label>Text Files</label>
+        <input type="number" id="txtPct" value="15" min="0" max="100" />%
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button id="startBtn" class="btn-primary">Start Upload</button>
+    <button id="stopBtn" class="btn-stop" disabled>Stop Upload</button>
+  </div>
+
+  <div class="card">
+    <div class="log-header">
+      <h3 style="margin:0">Upload Log</h3>
+      <button class="clear-log" id="clearLog">Clear</button>
+    </div>
+    <textarea id="log" readonly></textarea>
+  </div>
+
+  <script>
+    (() => {
+      const els = {
+        folderInput: document.getElementById('folderInput'),
+        uploadUrl: document.getElementById('uploadUrl'),
+        pdfPct: document.getElementById('pdfPct'),
+        imgPct: document.getElementById('imgPct'),
+        fpPct: document.getElementById('fpPct'),
+        txtPct: document.getElementById('txtPct'),
+        startBtn: document.getElementById('startBtn'),
+        stopBtn: document.getElementById('stopBtn'),
+        log: document.getElementById('log'),
+        fileStats: document.getElementById('fileStats'),
+        clearLog: document.getElementById('clearLog')
+      };
+
+      let stopRequested = false;
+
+      const fileType = {
+        isPdf: name => /\.pdf$/i.test(name),
+        isImage: name => /\.(jpe?g|png|gif|bmp|webp|tiff?)$/i.test(name),
+        isFingerprint: name => /\.(wsq|fpt|tif|tiff|raw|dat)$/i.test(name),
+        isText: name => /\.(txt|csv|json|xml|html?)$/i.test(name)
+      };
+
+      const log = (msg) => {
+        const timestamp = new Date().toLocaleTimeString();
+        els.log.value += `[${timestamp}] ${msg}\n`;
+        els.log.scrollTop = els.log.scrollHeight;
+      };
+
+      const categorize = (files) => {
+        const cats = { pdf: [], img: [], fp: [], txt: [], other: [] };
+        for (const f of files) {
+          const n = f.name;
+          if (fileType.isPdf(n)) cats.pdf.push(f);
+          else if (fileType.isImage(n)) cats.img.push(f);
+          else if (fileType.isFingerprint(n)) cats.fp.push(f);
+          else if (fileType.isText(n)) cats.txt.push(f);
+          else cats.other.push(f);
+        }
+        return cats;
+      };
+
+      const shuffle = (arr) => {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+      };
+
+      const calculateSelection = (categories, totalFiles, percentages) => {
+        const pcts = percentages.map(p => Math.max(0, parseInt(p.value) || 0));
+        const sum = pcts.reduce((a, b) => a + b, 0);
+        if (sum === 0) return { pools: [], total: 0 };
+
+        const targetTotal = Math.round(totalFiles * Math.min(sum, 100) / 100);
+        const normalized = pcts.map(p => sum > 100 ? p / sum : p / 100);
+        let targets = normalized.map(n => Math.round(n * targetTotal));
+
+        // Balance rounding errors
+        let diff = targetTotal - targets.reduce((a, b) => a + b, 0);
+        let i = 0;
+        while (diff !== 0) {
+          targets[i++ % 4] += diff > 0 ? 1 : -1;
+          diff += diff > 0 ? -1 : 1;
+        }
+
+        const types = ['pdf', 'img', 'fp', 'txt'];
+        const pools = types.map((type, idx) => {
+          const available = categories[type].length;
+          const want = Math.max(0, targets[idx]);
+          const take = Math.min(want, available);
+          return { type, want, take, available };
+        });
+
+        const actualTotal = pools.reduce((s, p) => s + p.take, 0);
+        return { pools, total: actualTotal };
+      };
+
+      els.folderInput.addEventListener('change', () => {
+        const files = Array.from(els.folderInput.files);
+        if (!files.length) {
+          els.fileStats.textContent = 'No folder selected.';
+          return;
+        }
+        const cats = categorize(files);
+        els.fileStats.textContent = `
+          Total: ${files.length} files | 
+          PDF: ${cats.pdf.length} | 
+          Images: ${cats.img.length} | 
+          Fingerprints: ${cats.fp.length} | 
+          Text: ${cats.txt.length} | 
+          Other: ${cats.other.length}
+        `.replace(/\s+/g, ' ');
+        log(`Loaded folder with ${files.length} files.`);
+      });
+
+      const uploadFile = async (file, idx, total, url, category) => {
+        const form = new FormData();
+        form.append('message', `upload_index=${idx}/${total}, filename=${file.name}, category=${category}`);
+        form.append('file', file, file.name);
+
+        const start = performance.now();
+        const res = await fetch(url, { method: 'POST', body: form });
+        const duration = ((performance.now() - start)).toFixed(1);
+
+        let json = {};
+        try { json = await res.json(); } catch {}
+
+        return { ok: res.ok, status: res.status, json, duration };
+      };
+
+      els.startBtn.addEventListener('click', async () => {
+        els.log.value = '';
+        stopRequested = false;
+
+        const url = els.uploadUrl.value.trim();
+        if (!url) return alert('Please enter the upload URL (including /upload)');
+
+        const files = Array.from(els.folderInput.files);
+        if (!files.length) return alert('Please select a folder first');
+
+        const percentages = [els.pdfPct, els.imgPct, els.fpPct, els.txtPct];
+        const categories = categorize(files);
+        const { pools, total } = calculateSelection(categories, files.length, percentages);
+
+        if (total === 0) {
+          log('No files to upload — check percentages or folder contents.');
+          return;
+        }
+
+        // Build shuffled pools
+        const shuffled = {
+          pdf: [...categories.pdf],
+          img: [...categories.img],
+          fp: [...categories.fp],
+          txt: [...categories.txt]
+        };
+        Object.values(shuffled).forEach(shuffle);
+
+        const toUpload = [];
+        pools.forEach(p => {
+          for (let i = 0; i < p.take; i++) {
+            toUpload.push({ file: shuffled[p.type][i], category: p.type });
+          }
+        });
+
+        // Interleave categories
+        const sequence = [];
+        const maxLen = Math.max(...pools.map(p => p.take));
+        for (let i = 0; i < maxLen; i++) {
+          pools.forEach(p => {
+            if (i < p.take) {
+              sequence.push(toUpload.find(x => x.category === p.type && !sequence.includes(x)));
+            }
+          });
+        }
+
+        log(`Starting upload of ${sequence.length} files (PDF:${shuffled.pdf.slice(0, pools[0].take).length}, IMG:${shuffled.img.slice(0, pools[1].take).length}, FP:${shuffled.fp.slice(0, pools[2].take).length}, TXT:${shuffled.txt.slice(0, pools[3].take).length})`);
+
+        els.startBtn.disabled = true;
+        els.stopBtn.disabled = false;
+
+        let success = 0, fail = 0;
+
+        for (let i = 0; i < sequence.length; i++) {
+          if (stopRequested) {
+            log('Upload cancelled by user.');
+            break;
+          }
+
+          const { file, category } = sequence[i];
+          log(`[${i+1}/${sequence.length}] Uploading ${file.name} [${category.toUpperCase()}]...`);
+
+          try {
+            const result = await uploadFile(file, i+1, sequence.length, url, category);
+            if (result.ok) {
+              success++;
+              log(`   Success [${result.duration}ms] → ${JSON.stringify(result.json)}`);
+            } else {
+              fail++;
+              log(`   Failed Failed HTTP ${result.status} → ${JSON.stringify(result.json)}`);
+            }
+          } catch (err) {
+            fail++;
+            log(`   Error Error: ${err.message}`);
+          }
+
+          await new Promise(r => setTimeout(r, 150));
+        }
+
+        log(`Finished! Success: ${success} | Failed: ${fail}`);
+        els.startBtn.disabled = false;
+        els.stopBtn.disabled = true;
+      });
+
+      els.stopBtn.addEventListener('click', () => {
+        stopRequested = true;
+        els.stopBtn.disabled = true;
+      });
+
+      els.clearLog.addEventListener('click', () => {
+        els.log.value = '';
+      });
+    })();
+  </script>
+</body>
+</html>
